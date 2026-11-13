@@ -1,6 +1,6 @@
 # Tac-DINO: Learning Tactile Features with Patch Alignment
 
-[Project Page](https://lihongcs.github.io/tacdino/) · [Paper](https://arxiv.org/abs/2606.12069) · [Touch3D Dataset on Hugging Face](https://huggingface.co/datasets/lihong-cs/Tac-DINO) · [Data Preparation Guide](docs/touch3d-data.md)
+[Project Page](https://lihongcs.github.io/tacdino/) · [Paper](https://arxiv.org/abs/2606.12069) · [Citation](#citation) · [Touch3D Dataset on Hugging Face](https://huggingface.co/datasets/lihong-cs/Tac-DINO) · [Data Preparation Guide](docs/touch3d-data.md)
 
 ![Tac-DINO teaser showing contact-level alignment, the 3D vision-tactile data collection system, and the CoMT-Bench evaluation tasks](assets/teaser.webp)
 
@@ -72,6 +72,23 @@ python -m dinov2.tacdino.univtac_dp.cli train --task lift_can \
 ```
 
 Replace `train` with `preflight` to validate the dataset and run a training-batch check on CUDA before starting. All files under `runs/` are local training outputs.
+
+## Citation
+
+If you use Tac-DINO or Touch3D in your research, please cite the paper.
+
+```bibtex
+@misc{li2026tacdinolearningtactilefeatures,
+  title         = {{Tac-DINO}: Learning Tactile Features with Patch Alignment},
+  author        = {Hong Li and Yankang Dong and Yue Xu and Yihan Tang and Jiamin Qiu
+                   and Qihang Yao and Xing Zhu and Yujun Shen and Nan Xue and Yong-Lu Li},
+  year          = {2026},
+  eprint        = {2606.12069},
+  archivePrefix = {arXiv},
+  primaryClass  = {cs.CV},
+  url           = {https://arxiv.org/abs/2606.12069},
+}
+```
 
 ## License
 
