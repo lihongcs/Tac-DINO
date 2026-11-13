@@ -1,4 +1,8 @@
-# Tac-DINO: Touch3D preprocessing, GeoTAC pretraining, and UniVTAC training
+# Tac-DINO: Learning Tactile Features with Patch Alignment
+
+[Project Page](https://lihongcs.github.io/tacdino/) · [Paper](https://arxiv.org/abs/2606.12069) · [Touch3D Dataset on Hugging Face](https://huggingface.co/datasets/lihong-cs/Tac-DINO)
+
+![Tac-DINO teaser showing contact-level alignment, the 3D vision-tactile data collection system, and the CoMT-Bench evaluation tasks](assets/teaser.webp)
 
 This code release contains Touch3D preprocessing, GeoTAC tactile encoder pretraining, and GeoTAC-initialized Diffusion Policy training on UniVTAC. Model weights are supplied through command-line paths. The release contains the training recipes and no GeoTAC or UniVTAC checkpoints.
 
