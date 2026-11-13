@@ -1,16 +1,11 @@
 import trimesh
 import os
-import cv2
 import numpy as np
 import copy
 import math
-import heapq
-import random
-import json
 import argparse
-from scipy.spatial import KDTree, cKDTree
-
-from joblib import Parallel, delayed
+from pathlib import Path
+from scipy.spatial import KDTree
 
                                #obj pts       bp_pts
 def find_points_within_epsilon(source_points, query_points, already_visible, epsilon):
@@ -63,7 +58,7 @@ def find_points_within_epsilon(source_points, query_points, already_visible, eps
     assert len(indices_keep) == len(indices_keep_list)
     assert len(indices_keep_list) ==  len(query_indices)
 
-    return np.array(indices_keep_list), np.array(query_indices)
+    return np.array(indices_keep_list, dtype=int), np.array(query_indices, dtype=int)
 
 def get_pixel_grid(H, W):
     ### creating pixel points
@@ -128,86 +123,53 @@ def find_visible_points(obj_pts, already_visible, depth, K, RT):
     return pt_idxs, im_pts
 
 def process_pts(render_dir, pc_dir):
-    # obj_name = render_dir.split('/')[-1].split("---")[0]
-    out_dct = {}
-    obj_pts = load_pc(os.path.join(pc_dir, f"scan.npy"))
+    render_dir = Path(render_dir)
+    pc_dir = Path(pc_dir)
+    images = sorted((render_dir / "rgb_images").glob("*.png"))
+    if not images:
+        raise FileNotFoundError(f"No rendered RGB images in {render_dir / 'rgb_images'}")
+    for image in images:
+        if not image.stem.isdecimal():
+            raise ValueError(f"Invalid rendered view name: {image.name}")
+        for folder in ("obj_pose", "K", "RT", "depth_npy"):
+            required = render_dir / folder / f"{image.stem}.npy"
+            if not required.is_file():
+                raise FileNotFoundError(f"Missing {folder} for view {image.name}: {required}")
 
-    images = np.arange(0, len(os.listdir(os.path.join(render_dir, "rgb_images"))))
+    obj_pts = load_pc(pc_dir / "scan.npy")
     already_visible = set()
-
-    for im_idx in images:
-
-        pose = np.load(os.path.join(render_dir, "obj_pose", f"{im_idx:04d}.npy"))
-        
+    out_dct = {}
+    for image in images:
+        view = image.stem
+        pose = np.load(render_dir / "obj_pose" / f"{view}.npy")
         pc = trimesh.PointCloud(copy.deepcopy(obj_pts))
         pc.apply_transform(pose)
         pc = np.array(pc.vertices)
 
-        K = np.load(os.path.join(render_dir, "K", f"{im_idx:04d}.npy"))
-        RT = np.load(os.path.join(render_dir, "RT", f"{im_idx:04d}.npy"))
-        depth = np.load(os.path.join(render_dir, "depth_npy", f"{im_idx:04d}.npy")) 
-
+        K = np.load(render_dir / "K" / f"{view}.npy")
+        RT = np.load(render_dir / "RT" / f"{view}.npy")
+        depth = np.load(render_dir / "depth_npy" / f"{view}.npy")
         vis_idxs, proj_vis_pts = find_visible_points(pc, already_visible, depth, K, RT)
-
-        # debugging
-        # im = np.zeros((490,490))
-        # im[proj_vis_pts[:,1], proj_vis_pts[:,0]] = 255
-        # cv2.imwrite(f"test_viz_dir/{im_idx:04d}.png", im)
-
-        out_dct[str(im_idx)] = {
+        out_dct[str(int(view))] = {
             "vis_pt_idx": vis_idxs,
-            "proj_2D_loc": proj_vis_pts[:,[1,0]]
+            "proj_2D_loc": proj_vis_pts[:, [1, 0]],
         }
 
-    output_path = os.path.join(render_dir, "visible_pt_dict.npz")
-    np.savez(output_path, **out_dct)
+    np.savez(render_dir / "visible_pt_dict.npz", **out_dct)
+
 
 def main(args):
+    root = Path(args.object_dir)
+    scan_dirs = {path.parent for path in root.glob("*/*/Preprocessed0111/scan.glb")}
+    scan_dirs.update(path.parent for path in root.glob("*/*/Preprocessed0111/scan.npy"))
+    if not scan_dirs:
+        raise FileNotFoundError(f"No normalized scans or sampled point clouds found under {root}")
 
-    cate_list = os.listdir(args.object_dir)
-    cate_list = [f for f in cate_list if os.path.isdir(os.path.join(args.object_dir, f))]
+    print(f"Projecting visible points for {len(scan_dirs)} scans")
+    for scan in sorted(scan_dirs):
+        process_pts(scan / "render", scan)
 
-    input_file_lists = []
-    input_pc_lists  = []
-    
-    for each_cate in cate_list:
-        cate_file_path = os.path.join(args.object_dir, each_cate)
-        
-        obj_instance_list = os.listdir(cate_file_path)
-        obj_instance_list = [obj for obj in obj_instance_list if os.path.isdir(os.path.join(cate_file_path, obj))]
-        
-        for each_obj in obj_instance_list:
-            os.listdir(os.path.join(cate_file_path, each_obj))
-            os.listdir(os.path.join(cate_file_path, each_obj, "Preprocessed0111"))
-            input_exr_path = os.path.join(cate_file_path, each_obj, "Preprocessed0111", "render")
-            input_pc_path = os.path.join(cate_file_path, each_obj, "Preprocessed0111","scan.npy")
-            
-            if each_cate == "snack_box" and each_obj == "obj_0002":
-                input_file_lists.append(input_exr_path)
-                input_pc_lists.append(os.path.join(cate_file_path, each_obj, "Preprocessed0111"))
-            
-            # if os.path.exists(os.path.join(cate_file_path, each_obj, "Preprocessed0111", "render", "visible_pt_dict.npz")):
-            #     continue
-            
-            # if os.path.isdir(input_exr_path) and os.path.exists(input_pc_path):
-            #     input_file_lists.append(input_exr_path)
-            #     input_pc_lists.append(os.path.join(cate_file_path, each_obj, "Preprocessed0111"))
-            # else:
-            #     print(input_exr_path)
-            #     exit()
-    
-    # render_root = "<#TODO: path to rendered images>"
-    # pc_root = "<#TODO: path to extracted pointclouds>"
-    
-    # items = os.listdir(render_root)
-    
-    # render_dirs = [os.path.join(render_root, item) for item in items]
-    print(f"{len(input_file_lists)} to process")
-    
-    
-    Parallel(n_jobs=1, backend='sequential', verbose=10)(
-        delayed(process_pts)(render_dir, pc_root) for render_dir,pc_root in zip(input_file_lists, input_pc_lists))
-    
+
 if __name__ == "__main__":
     parser = argparse.ArgumentParser()
     parser.add_argument(

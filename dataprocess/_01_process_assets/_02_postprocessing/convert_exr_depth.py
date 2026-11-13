@@ -1,9 +1,9 @@
-import os
 import numpy as np
 import OpenEXR as exr
 import Imath
 import argparse
-from joblib import Parallel, delayed
+from pathlib import Path
+from tempfile import NamedTemporaryFile
 
 def readEXR(filename):
     """Read RGB + Depth data from EXR image file.
@@ -51,67 +51,43 @@ def readEXR(filename):
     return Z
 
 def convert_exr_to_npy(input_directory, output_directory):
-    # Ensure the output directory exists
-    os.makedirs(output_directory, exist_ok=True)
-    
-    # Loop through all files in the input directory
-    for filename in os.listdir(input_directory):
-        if filename.endswith('.exr'):
-            # Construct full file path
-            file_path = os.path.join(input_directory, filename)
-            
-            depth_array = readEXR(file_path).astype(np.float16)
-            
-            # Define output filename and save the array
-            output_filename = os.path.splitext(filename)[0].replace('_0001','') + '.npy'
-            output_path = os.path.join(output_directory, output_filename)
-            np.save(output_path, depth_array)
-            #print(f"Converted {filename} to {output_filename}")
+    input_directory = Path(input_directory)
+    output_directory = Path(output_directory)
+    depth_files = sorted(input_directory.glob("*.exr"))
+    if not depth_files:
+        raise FileNotFoundError(f"No rendered EXR depth files in {input_directory}")
+
+    depth_by_view = {path.stem.removesuffix("_0001"): path for path in depth_files}
+    for image in sorted((input_directory.parent / "rgb_images").glob("*.png")):
+        if image.stem not in depth_by_view:
+            raise FileNotFoundError(f"Missing rendered EXR depth for {image}")
+
+    output_directory.mkdir(parents=True, exist_ok=True)
+    for view, path in depth_by_view.items():
+        output = output_directory / f"{view}.npy"
+        if output.is_file():
+            continue
+        depth = readEXR(str(path)).astype(np.float16)
+        with NamedTemporaryFile(dir=output_directory, suffix=".tmp", delete=False) as temporary:
+            temporary_path = Path(temporary.name)
+            try:
+                np.save(temporary, depth)
+                temporary.close()
+                temporary_path.replace(output)
+            finally:
+                temporary_path.unlink(missing_ok=True)
+
 
 def main(args):
-    
-    
-    cate_list = os.listdir(args.object_dir)
-    cate_list = [f for f in cate_list if os.path.isdir(os.path.join(args.object_dir, f))]
+    root = Path(args.object_dir)
+    render_dirs = {path for path in root.glob("*/*/Preprocessed0111/render") if path.is_dir()}
+    render_dirs.update(mesh.parent / "render" for mesh in root.glob("*/*/Preprocessed0111/scan.glb"))
+    if not render_dirs:
+        raise FileNotFoundError(f"No normalized scans or render directories found under {root}")
 
-    input_file_lists = []
-    output_file_lists = []
-    
-    for each_cate in cate_list:
-        cate_file_path = os.path.join(args.object_dir, each_cate)
-        
-        obj_instance_list = os.listdir(cate_file_path)
-        obj_instance_list = [obj for obj in obj_instance_list if os.path.isdir(os.path.join(cate_file_path, obj))]
-        
-        for each_obj in obj_instance_list:
-            input_exr_path = os.path.join(cate_file_path, each_obj, "Preprocessed0111", "render","depth_exr")
-            output_npy_path = os.path.join(cate_file_path, each_obj, "Preprocessed0111", "render","depth_npy")
-            
-            os.listdir(input_exr_path)
-            if os.path.exists(output_npy_path) and len(os.listdir(output_npy_path)) > 0:
-                continue
-            elif os.path.exists(input_exr_path):
-                input_file_lists.append(input_exr_path)
-                output_file_lists.append(output_npy_path)
-            else:
-                print(f"Skipping {each_obj} as no depth_exr found.")
-            
-    
-    print(f"{len(output_npy_path)} to process")
-    
-    # items = sorted(os.listdir(render_dir))
-    # input_dirs = []
-    # output_dirs = []
-    # for input_dir, output_dir in zip(input_file_lists, output_file_lists):
-    #     # print(f"Processing {input_dir} to {output_dir}")
-    #     input_dirs.append(input_dir)
-    #     output_dirs.append(output_dir)
-    
-    # input_dirs = [os.path.join(render_dir, item, "depth_exr") for item in items]
-    # output_dirs = [input_dir.replace('depth_exr', 'depth_npy') for input_dir in input_dirs]
-
-    Parallel(n_jobs=1, backend='multiprocessing', verbose=10)(
-        delayed(convert_exr_to_npy)(input_dir, output_dir) for input_dir, output_dir in zip(input_file_lists, output_file_lists))
+    print(f"Converting depth for {len(render_dirs)} scans")
+    for render in sorted(render_dirs):
+        convert_exr_to_npy(render / "depth_exr", render / "depth_npy")
 
 
 if __name__ == "__main__":

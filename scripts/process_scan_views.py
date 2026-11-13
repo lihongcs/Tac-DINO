@@ -184,3 +184,5 @@ if __name__ == "__main__":
 
     with ProcessPoolExecutor(max_workers=num_cpus) as main_executor:
         main_futures = [main_executor.submit(run_main, args, categories[i], i) for i in range(num_cpus)]
+        for future in main_futures:
+            future.result()

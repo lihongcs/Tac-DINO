@@ -4,4 +4,4 @@ scipy
 trimesh
 requests
 zstandard
-huggingface_hub
+huggingface_hub>=0.32,<1

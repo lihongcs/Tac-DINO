@@ -1,6 +1,6 @@
 # Tac-DINO: Learning Tactile Features with Patch Alignment
 
-[Project Page](https://lihongcs.github.io/tacdino/) · [Paper](https://arxiv.org/abs/2606.12069) · [Touch3D Dataset on Hugging Face](https://huggingface.co/datasets/lihong-cs/Tac-DINO)
+[Project Page](https://lihongcs.github.io/tacdino/) · [Paper](https://arxiv.org/abs/2606.12069) · [Touch3D Dataset on Hugging Face](https://huggingface.co/datasets/lihong-cs/Tac-DINO) · [Data Preparation Guide](docs/touch3d-data.md)
 
 ![Tac-DINO teaser showing contact-level alignment, the 3D vision-tactile data collection system, and the CoMT-Bench evaluation tasks](assets/teaser.webp)
 
@@ -21,39 +21,7 @@ The existing loss and geometry tests can run on CPU with `python -m pytest -q` a
 
 ## Touch3D preprocessing
 
-Restore the processed data from [Touch3D on Hugging Face](https://huggingface.co/datasets/lihong-cs/Tac-DINO). The downloader writes the category/object data tree and a sibling metadata directory with label maps and the public split lists. Use `--dry-run` to inspect the archive selection and its download size. `--object category/object_id` limits restoration to selected objects.
-
-```sh
-python -m scripts.download_touch3d --group Scan3dTac --output ./data/touch3d
-python -m scripts.index_tactile_geometry \
-  --data-root ./data/touch3d --output ./data/derived/frame10.jsonl
-python -m scripts.prepare_tactile_geometry \
-  --data-root ./data/touch3d --source-manifest ./data/derived/frame10.jsonl \
-  --output ./data/derived/tactile_geometry
-python -m scripts.certify_tactile_geometry \
-  --manifest ./data/derived/tactile_geometry/manifest.json \
-  --output ./data/derived/tactile_geometry/certified.json \
-  --report ./data/derived/tactile_geometry/report
-```
-
-The geometry converter takes existing organized GelSight frame-10 PLY reconstructions and matching tactile MP4 files. It generates relative depth, validity masks and point-cloud inputs. Local RGB/depth/point-cloud crops are built by the training dataloader. The raw GelSight video-to-geometry reconstruction script and sensor calibration used for collection were unavailable in the source checkout.
-
-### Regenerate scan views from raw meshes
-
-Run the mesh tools on a writable working copy of the raw data. The normalization step uses the manually labeled 3D contacts in `Annotation/tactile_pc_location.json` and writes normalized contact positions. The render wrapper uses the bundled camera positions and a caller-supplied HDRI folder. Restored processed data can skip this sequence.
-
-```sh
-ASSETS=dataprocess/_01_process_assets
-blender --background --python-exit-code 1 \
-  --python "$ASSETS/_00_geomotry_process/clear_parents_and_normalize.py" \
-  -- --object_dir ./data/touch3d_raw
-python "$ASSETS/_00_geomotry_process/extract_pointcloud.py" --data_path ./data/touch3d_raw
-python "$ASSETS/_01_rendering/wrapper.py" --data_path ./data/touch3d_raw --hdr-dir ./data/hdri
-python "$ASSETS/_02_postprocessing/convert_exr_depth.py" --object_dir ./data/touch3d_raw
-python "$ASSETS/_02_postprocessing/find_visible_points.py" --object_dir ./data/touch3d_raw
-python -m scripts.process_scan_views --root_dir ./data/touch3d_raw
-python -m scripts.project_contacts --root-dir ./data/touch3d_raw
-```
+Follow the [Touch3D data preparation guide](docs/touch3d-data.md) to download the original scans, regenerate views and contact correspondences, or prepare the published data for GeoTAC pretraining.
 
 ## GeoTAC pretraining
 
