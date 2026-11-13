@@ -1,0 +1,17 @@
+{
+    "rigid_plastics": 0,
+    "rubber": 1,
+    "fabric": 2,
+    "steel": 3,
+    "flexible_plastics": 4,
+    "paper": 5,
+    "iron": 6,
+    "ceramic": 7,
+    "wood": 8,
+    "nylon": 9,
+    "paperboard": 10,
+    "metal": 11,
+    "leather": 12,
+    "glass": 13,
+    "foam":14
+}

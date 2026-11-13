@@ -1,0 +1,79 @@
+{
+  "dataset_revision": "e1aee7b0c95543b535e0146b2de3ee1bc6ddaabd",
+  "cameras": {
+    "lift_can": [
+      "head"
+    ],
+    "lift_bottle": [
+      "head",
+      "wrist"
+    ],
+    "grasp_classify": [
+      "head"
+    ],
+    "insert_tube": [
+      "head",
+      "wrist"
+    ]
+  },
+  "tactile_sensors": [
+    "left_gsmini",
+    "right_gsmini"
+  ],
+  "live_tactile_sensors": [
+    "left_tactile",
+    "right_tactile"
+  ],
+  "tactile_image": "rgb",
+  "freeze_backbones": false,
+  "image_size": 224,
+  "input_protocol": "isaac_rgb_v1",
+  "feature_dim": 1024,
+  "image_normalization": "imagenet_rgb",
+  "feature_pooling": "x_norm_clstoken",
+  "observation_steps": 1,
+  "prediction_horizon": 50,
+  "action_steps": 1,
+  "action_dim": 8,
+  "action_target": "next_recorded_joint_position_first_8",
+  "temporal_reset_policy": "split_at_nonincreasing_simulation_step",
+  "expected_episodes": 100,
+  "validation_episodes": 20,
+  "split_seed": 1,
+  "seed": 42,
+  "batch_size": 192,
+  "micro_batch_size": 24,
+  "data_workers": 6,
+  "optimizer_betas": [
+    0.95,
+    0.999
+  ],
+  "initial_training_steps": 10000,
+  "training_steps": 30000,
+  "learning_rate": 1e-05,
+  "weight_decay": 0.0001,
+  "warmup_steps": 200,
+  "gradient_clip": 1.0,
+  "ema_decay": 0.999,
+  "validation_every": 250,
+  "initial_validation_step": 20,
+  "validation_windows": 256,
+  "diffusion_train_steps": 100,
+  "diffusion_inference_steps": 20,
+  "noise_schedule": "squaredcos_cap_v2",
+  "prediction_type": "epsilon",
+  "condition_dim": 256,
+  "unet_down_dims": [
+    256,
+    512,
+    1024
+  ],
+  "max_checkpoint_files": 3,
+  "protocol_name": "univtac_100episodes_dp_nomarker",
+  "protocol_episode_count": 100,
+  "episode_split_policy": "univtac_act_v1",
+  "train_ratio": 0.8,
+  "evaluation_rollouts": 40,
+  "experiment": "geotac",
+  "use_tactile": true
+}

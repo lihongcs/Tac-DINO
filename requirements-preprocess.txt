@@ -1,0 +1,7 @@
+OpenEXR
+joblib
+scipy
+trimesh
+requests
+zstandard
+huggingface_hub
