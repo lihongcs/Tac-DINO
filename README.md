@@ -1,10 +1,10 @@
 # Tac-DINO: Learning Tactile Features with Patch Alignment
 
-[Project Page](https://lihongcs.github.io/tacdino/) · [Paper](https://arxiv.org/abs/2606.12069) · [Citation](#citation) · [Touch3D Dataset on Hugging Face](https://huggingface.co/datasets/lihong-cs/Tac-DINO) · [Data Preparation Guide](docs/touch3d-data.md)
+[Project Page](https://lihongcs.github.io/tacdino/) · [Paper](https://arxiv.org/abs/2606.12069) · [Citation](#citation) · [Touch3D Dataset on Hugging Face](https://huggingface.co/datasets/lihong-cs/Tac-DINO) · [Data Preparation Guide](docs/touch3d-data.md) · [UniVTAC Training Guide](docs/univtac/README.md)
 
 ![Tac-DINO teaser showing contact-level alignment, the 3D vision-tactile data collection system, and the CoMT-Bench evaluation tasks](assets/teaser.webp)
 
-This code release contains Touch3D preprocessing, GeoTAC tactile encoder pretraining, and GeoTAC-initialized Diffusion Policy training on UniVTAC. Model weights are supplied through command-line paths. The release contains the training recipes and no GeoTAC or UniVTAC checkpoints.
+This repository contains Touch3D preprocessing, GeoTAC tactile encoder pretraining, and GeoTAC-initialized Diffusion Policy training on UniVTAC.
 
 ## Installation
 
@@ -57,21 +57,7 @@ python -m scripts.train_geotac \
 
 ## UniVTAC post-training
 
-Restore [UniVTAC Isaac 4.5 HDF5 demonstrations](https://huggingface.co/datasets/byml/UniVTAC/tree/main/isaac45) in `data/univtac/isaac45/<task>/hdf5/`. The dataset revision is specified in [`configs/univtac_geotac.json`](configs/univtac_geotac.json). The four tasks are `lift_can`, `lift_bottle`, `grasp_classify`, and `insert_tube`. Each run writes into `<output>/<task>/geotac/`. Each task uses 100 demonstrations with a seeded 80/20 train/validation split. The config records AdamW LR `1e-5`, weight decay `1e-4`, 200 warmup steps, effective batch size `192`, microbatch `24`, and seed `42`. Both backbones are fine-tuned. The policy uses one observation step, a 50-step prediction horizon, one executed action per prediction, 100 DDPM training timesteps and 20 DDIM inference timesteps.
-
-Use a GeoTAC `teacher_checkpoint.pth` generated in pretraining. The original policy protocol trains for 10,000 steps and then resumes that run to 30,000. Use the same checkpoint and output path for both stages. For multi-GPU policy training, run the same module with `torchrun --standalone --nproc_per_node=<GPU_COUNT> -m` in place of `python -m` and choose a microbatch such that the global batch remains divisible by the product of GPU count and microbatch size.
-
-```sh
-GEOTAC_CKPT=./runs/geotac/training/eval/training_1847/teacher_checkpoint.pth
-python -m dinov2.tacdino.univtac_dp.cli train --task lift_can \
-  --data-root ./data/univtac --geotac-checkpoint "$GEOTAC_CKPT" \
-  --output ./runs/univtac --stage initial
-python -m dinov2.tacdino.univtac_dp.cli train --task lift_can \
-  --data-root ./data/univtac --geotac-checkpoint "$GEOTAC_CKPT" \
-  --output ./runs/univtac --stage final --resume --extend-training
-```
-
-Replace `train` with `preflight` to validate the dataset and run a training-batch check on CUDA before starting. All files under `runs/` are local training outputs.
+Follow the [UniVTAC installation and training guide](docs/univtac/README.md) to install the policy training environment, download demonstrations, run preflight, and train or resume the GeoTAC-initialized policy.
 
 ## Citation
 
